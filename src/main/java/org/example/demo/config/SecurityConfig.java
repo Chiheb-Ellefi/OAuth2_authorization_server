@@ -82,13 +82,7 @@ public class SecurityConfig {
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder().build();
     }
-    @Bean
-    public OAuth2TokenCustomizer<JwtEncodingContext> jwtEncodingContextOAuth2TokenCustomizer(){
-        return context -> {
-            JwtClaimsSet.Builder claims = context.getClaims();
 
-        };
-    }
 
     //to register the tokens (access tokens, refresh tokens ...)
     @Bean
