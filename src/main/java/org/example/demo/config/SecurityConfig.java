@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.example.demo.entities.User;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -110,8 +111,12 @@ public class SecurityConfig {
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtTokenCustomizer() {
         return context -> {
             JwtClaimsSet.Builder claims = context.getClaims();
-           claims.claim("username", context.getPrincipal().getName());
-           claims.claim("role",context.)
+            if(context.getPrincipal() instanceof  User user){
+                claims.claim("id", user.getId());
+                claims.claim("username", user.getUsername());
+                claims.claim("role", user.getRole());
+            }
+
         };
     }
 
