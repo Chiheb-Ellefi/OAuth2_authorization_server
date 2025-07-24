@@ -11,3 +11,26 @@ spring:
       ddl-auto: update
     show-sql: true
     open-in-view: off
+
+
+
+
+application:
+  jwt:
+    access_token:
+      ttl: 15
+    refresh_token:
+      ttl: 60
+      reuse_token: true
+    authorization_code:
+      ttl: 30
+
+logging:
+  level:
+    org:
+      springframework:
+        security:
+          oauth2:
+            server:
+              authorization: DEBUG
+        web: DEBUG

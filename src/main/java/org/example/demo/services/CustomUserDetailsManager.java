@@ -58,6 +58,32 @@ public class CustomUserDetailsManager implements UserDetailsManager {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Supplier<UsernameNotFoundException> exceptionSupplier = () -> new UsernameNotFoundException(username + " not found");
-        return userRepository.findByUsername(username).orElseThrow(exceptionSupplier);
+        User userEntity = userRepository.findByUsername(username).orElseThrow(exceptionSupplier);
+
+    //return the security User class instead of the custom UserDetails class
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(userEntity.getUsername())
+                .password(userEntity.getPassword())
+                .authorities(userEntity.getAuthorities())
+                .accountExpired(!userEntity.isAccountNonExpired())
+                .accountLocked(!userEntity.isAccountNonLocked())
+                .credentialsExpired(!userEntity.isCredentialsNonExpired())
+                .disabled(!userEntity.isEnabled())
+                .build();
+    }
+
+    public void lockUserAfterFailedAttempts(User user) {
+        user.incrementFailedLoginAttempts();
+        if (user.getFailedLoginAttempts() >= 3) {
+            user.lockAccount();
+        }
+        userRepository.save(user);
+    }
+
+
+    public void disableUser(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        user.disableAccount();
+        userRepository.save(user);
     }
 }

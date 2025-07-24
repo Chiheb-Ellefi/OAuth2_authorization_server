@@ -12,10 +12,13 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
@@ -27,6 +30,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -36,6 +40,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     @Order(1)
@@ -45,26 +50,33 @@ public class SecurityConfig {
         OAuth2AuthorizationServerConfigurer configurer = new OAuth2AuthorizationServerConfigurer();
         RequestMatcher endpointMatcher= configurer.getEndpointsMatcher();
         http.securityMatcher(endpointMatcher)
-                .with(configurer,Customizer.withDefaults())
-                .authorizeHttpRequests(authorize->authorize.anyRequest().authenticated())
+                .with(configurer, Customizer.withDefaults())
+                .authorizeHttpRequests(authorize->{
+                    authorize.requestMatchers("/client").permitAll();
+            authorize.anyRequest().authenticated();
+
+        })
                 .csrf(csrf->csrf.ignoringRequestMatchers(endpointMatcher))
                 .getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());
+        http.exceptionHandling((e) ->
+                e.authenticationEntryPoint(
+                        new LoginUrlAuthenticationEntryPoint("/login"))
+        );
         return http.build();
 
     }
-
     @Order(2)
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.httpBasic(Customizer.withDefaults())
-        .csrf(AbstractHttpConfigurer::disable)
-        .cors(Customizer.withDefaults());
+        http
+                .formLogin(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
     @Bean
     public RegisteredClientRepository registeredClientRepository(JdbcTemplate template) {
-        return new JdbcRegisteredClientRepository(template);
+        return  new JdbcRegisteredClientRepository(template);
+
     }
 
     @Bean
@@ -80,9 +92,9 @@ public class SecurityConfig {
     }
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
-        return AuthorizationServerSettings.builder().build();
+        return AuthorizationServerSettings.builder()
+                .build();
     }
-
 
     //to register the tokens (access tokens, refresh tokens ...)
     @Bean
@@ -101,6 +113,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+
+
+
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtTokenCustomizer() {
         return context -> {
@@ -113,5 +128,8 @@ public class SecurityConfig {
 
         };
     }
-
+    @Bean
+    public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
+        return new NimbusJwtEncoder(jwkSource);
+    }
 }
